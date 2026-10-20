@@ -7,18 +7,29 @@ enum CustomerType: string
 	case VIP = 'vip';
 	case STAFF = 'staff';
 	case TRADE = 'trade';
-	case GIFT = 'gift';
 	case STUDENT = 'student';
 
-	public function getDiscountPercentage(): float
+	public function getDiscountPercentage(): int
 	{
 		return match($this) {
+			self::STAFF => 50,
+			self::VIP => 20,
 			self::STUDENT => 15,
+			self::TRADE => 10,
+			self::REGULAR,
+			default => 0,
+		};
+	}
+
+	public function getDiscountAmount(): float
+	{
+		return match($this) {
+			self::TRADE => 5.00,
 			self::REGULAR,
 			self::VIP,
 			self::STAFF,
-			self::TRADE,
-			self::GIFT => 0,
+			self::STUDENT,
+			default => 0,
 		};
 	}
 }

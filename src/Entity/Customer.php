@@ -4,8 +4,9 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\CustomerRepository;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: CustomerRepository::class)]
 class Customer
 {
     #[ORM\Id]
