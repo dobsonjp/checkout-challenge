@@ -8,17 +8,14 @@ use App\Config\CustomerType;
 
 class CustomerRepository extends EntityRepository
 {
-	public function findOrCreate(array $params): Customer
+	public function findOrCreate(string $email, string $customerType): Customer
 	{
-		$customer = $this->findOneBy($params);
+		$customer = $this->findOneBy($email);
 
 		if (is_null($customer)) {
 			$customer = new Customer();
-			$customer->setEmail($params['email']);
-			$customer->setType($params['customerType'] ?? CustomerType::REGULAR);
-
-			$customer->persist();
-			$customer->flush();
+			$customer->setEmail($email);
+			$customer->setType($customerType);
 		}
 
 		return $customer;
