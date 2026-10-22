@@ -18,7 +18,7 @@ class Customer
     private ?string $email = null;
 
     /**
-     * One of: regular, vip, staff, trade.
+     * One of: regular, vip, staff, trade, student.
      */
     #[ORM\Column(length: 20)]
     private ?string $type = null;

@@ -13,13 +13,26 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Repository\CustomerRepository;
+use App\Repository\OrderRepository;
+use App\Repository\OrderItemRepository;
+use App\Service\CheckoutService;
 
 class CheckoutController extends AbstractController
 {
+    private CustomerRepository $customerRepo;
+    private OrderRepository $orderRepo;
+
     public const GIFT_WRAP_PRICE = 3.50;
 
+    public function __construct(EntityManagerInterface $entityManager)
+    {
+        $this->customerRepo = $entityManager->getRepository(Customer::class);
+        $this->orderRepo = $entityManager->getRepository(Order::class);
+    }
+
     #[Route('/checkout', methods: ['POST'])]
-    public function checkout(Request $request, EntityManagerInterface $em, MailerInterface $mailer): JsonResponse
+    public function checkout(Request $request, CheckoutService $service, EntityManagerInterface $em, MailerInterface $mailer): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
@@ -27,67 +40,26 @@ class CheckoutController extends AbstractController
             return new JsonResponse(['error' => 'Empty cart'], 500);
         }
 
-        // find or create the customer
-        $customer = $em->getRepository(Customer::class)->findOneBy(['email' => $data['email']]);
-        if (!$customer) {
-            $customer = new Customer();
-            $customer->setEmail($data['email']);
-            $em->persist($customer);
-        }
-        $customer->setType($data['customerType'] ?? 'regular');
+        $order = $service
+            ->findOrCreateCustomer()
+            ->createOrder()
+            ->fillOrder()
+            ->setTotal()
+            ->setRecipientEmail()
+            ->getOrder();
 
-        $order = new Order();
-        $order->setCustomer($customer);
-        $order->setCreatedAt(new \DateTimeImmutable());
-
-        $total = 0;
-        foreach ($data['cart'] as $row) {
-            $item = new OrderItem();
-            $item->setSku($row['sku']);
-            $item->setPrice((float) $row['price']);
-            $item->setQty((int) $row['qty']);
-            $order->addItem($item);
-
-            $total += $row['price'] * $row['qty'];
-        }
-
-        if (!empty($data['sample'])) {
-            // warehouse team: free product samples go through checkout too
-            $order->setSample(true);
-            $total = 0;
-        } elseif ($customer->getType() === 'vip') {
-            $total *= 0.8;
-        } elseif ($customer->getType() === 'staff') {
-            $total *= 0.5;
-        } elseif ($customer->getType() === 'trade') {
-            $total = $total * 0.9 - 5;
-        }
-
-        $to = $data['email'];
-        if (!empty($data['gift'])) {
-            // gifting team: send it to the recipient instead
-            $order->setGift(true);
-            $order->setRecipientEmail($data['recipientEmail']);
-            $to = $data['recipientEmail'];
-        }
-
-        $order->setTotal((float) $total);
         $em->persist($order);
         $em->flush();
-
-        if ($order->isGift()) {
-            $total += self::GIFT_WRAP_PRICE;
-        }
 
         if ($order->isSample()) {
             $body = 'Your free sample of ' . $data['cart'][0]['sku'] . ' is on its way!';
         } else {
-            $body = 'Thanks for your order! Total: £' . number_format($total, 2);
+            $body = 'Thanks for your order! Total: £' . $order->getTotal();
         }
         $mailer->send(
             (new Email())
                 ->from('shop@example.com')
-                ->to($to)
+                ->to($order->getRecipientEmail())
                 ->subject('Your order')
                 ->text($body)
         );
@@ -98,6 +70,6 @@ class CheckoutController extends AbstractController
         }
         file_put_contents($logDir . '/orders.log', date('c') . ' order placed for ' . $data['email'] . "\n", FILE_APPEND);
 
-        return new JsonResponse(['id' => $order->getId(), 'total' => $total]);
+        return new JsonResponse(['id' => $order->getId(), 'total' => $order->getTotal()]);
     }
 }

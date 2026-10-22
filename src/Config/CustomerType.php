@@ -7,14 +7,14 @@ enum CustomerType: string
 	case VIP = 'vip';
 	case STAFF = 'staff';
 	case TRADE = 'trade';
-	case STUDENT = 'student';
+	case STUDENT = 'student'; // CHK-101 - add student customer type
 
 	public function getDiscountPercentage(): int
 	{
 		return match($this) {
 			self::STAFF => 50,
 			self::VIP => 20,
-			self::STUDENT => 15,
+			self::STUDENT => 15, // CHK-101 - add 15% discount for students
 			self::TRADE => 10,
 			self::REGULAR,
 			default => 0,

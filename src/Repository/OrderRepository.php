@@ -15,6 +15,7 @@ class OrderRepository extends EntityRepository
 		$order = new Order();
         $order->setCustomer($customer);
         $order->setCreatedAt(new \DateTimeImmutable());
+        // CHK-102 - ensure gifts flagged as such
     	$order->setGift($isGift);
     	$order->setSample($isSample);
 
