@@ -6,7 +6,7 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\OrderItemRepository;
 
-#[ORM\Entity(repositoryClass OrderItemRepository::class))]
+#[ORM\Entity(repositoryClass: OrderItemRepository::class))]
 class OrderItem
 {
     #[ORM\Id]
